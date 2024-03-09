@@ -1,7 +1,7 @@
 HttpService = game:GetService("HttpService")
 
 -- เก็บ URL Webhook ไว้ที่ปลอดภัย (นอกสคริปต์)
-Webhook_URL = "https://discord.com/api/webhooks/..."
+Webhook_URL = "https://discord.com/api/webhooks/1214555116015718400/T0_T_4Ted8lZYkeFTUhG7G6Lb3Z5SYINe_iXCzFN4E7QpzkFfTuADOPsoSxKwX074JcG"
 
 local function sendNotification(itemName)
   local req = HttpService:JSONEncode({
@@ -48,7 +48,7 @@ local itemsSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Inte
 -- เพิ่มการตรวจสอบเฟรมคลังเพิ่มเติมหากจำเป็น
 
 -- ตรวจสอบไอเท็มใหม่เป็นระยะ (ปรับระยะเวลาตามต้องการ)
-while wait(5) do  -- ตรวจสอบทุก 5 วินาที
+while wait() do  -- ตรวจสอบทุก 5 วินาที
   weaponSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame, weaponSeenItems)
   itemsSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame, itemsSeenItems)
 end
