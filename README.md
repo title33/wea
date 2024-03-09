@@ -1,3 +1,5 @@
+
+
 local HttpService = game:GetService("HttpService")
 local Webhook_URL = "https://discord.com/api/webhooks/1214555116015718400/T0_T_4Ted8lZYkeFTUhG7G6Lb3Z5SYINe_iXCzFN4E7QpzkFfTuADOPsoSxKwX074JcG"
 
@@ -57,27 +59,44 @@ local function BackpackChanged()
 end
 
 function SendDiscordWebhook(message)
-  local req = requestfunc({
-    Url = Webhook_URL,
-    Method = 'POST',
-    Headers = {
-      ['Content-Type'] = 'application/json'
-    },
-    Body = HttpService:JSONEncode({
-      ["content"] = "",
-      ["embeds"] = {{
-        ["title"] = "มีการเปลี่ยนแปลงในคลังหรือกระเป๋า",
-        ["description"] = message
-      }}
+  pcall(function()
+    local req = requestfunc({
+      Url = Webhook_URL,
+      Method = 'POST',
+      Headers = {
+        ['Content-Type'] = 'application/json'
+      },
+      Body = HttpService:JSONEncode({
+        ["content"] = "",
+        ["embeds"] = {{
+          ["title"] = "มีการเปลี่ยนแปลงในคลังหรือกระเป๋า",
+          ["description"] = message
+        }}
+      })
     })
-  })
+  catch err
+    warn("**ข้อผิดพลาด:** " .. err)
+  end)
 end
 
+-- ตรวจสอบว่า `requestfunc` มีอยู่จริง
+local requestfunc = http and http.request or http_request or fluxus and fluxus.request or request
+
+if not requestfunc then
+  warn("**ข้อผิดพลาด:** ไม่พบ 'requestfunc' โปรดตรวจสอบให้แน่ใจว่ามีการติดตั้งไลบรารีที่จำเป็น")
+  return
+end
+
+-- จัดการข้อผิดพลาด `HttpService`
+pcall(function()
+  SendDiscordWebhook("**ทดสอบการแจ้งเตือน:** " .. game.PlaceId)
+catch err
+  warn("**ข้อผิดพลาด:** " .. err)
+end)
+
 -- เชื่อมต่อฟังก์ชันกับเหตุการณ์
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-  if input.KeyCode == Enum.KeyCode.Escape then
-    InventoryWeaponFrameChanged()
-    InventoryItemsFrameChanged()
-    BackpackChanged()
-  end
+game:GetService("RunService").Heartbeat:Connect(function()
+  InventoryWeaponFrameChanged()
+  InventoryItemsFrameChanged()
+  BackpackChanged()
 end)
