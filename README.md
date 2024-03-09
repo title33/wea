@@ -1,46 +1,54 @@
 HttpService = game:GetService("HttpService")
-Webhook_URL = "https://discord.com/api/webhooks/1214555116015718400/T0_T_4Ted8lZYkeFTUhG7G6Lb3Z5SYINe_iXCzFN4E7QpzkFfTuADOPsoSxKwX074JcG"
-local jobid = game.JobId
-local Userid = game.Players.LocalPlayer.UserId
-local DName = game.Players.LocalPlayer.DisplayName
-local Name = game.Players.LocalPlayer.Name
-local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
-local GameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-local requestfunc = http and http.request or http_request or fluxus and fluxus.request or request
+
+-- เก็บ URL Webhook ไว้ที่ปลอดภัย (นอกสคริปต์)
+Webhook_URL = "https://discord.com/api/webhooks/..."
 
 local function sendNotification(itemName)
-    local req = requestfunc({
-       Url = Webhook_URL,
-       Method = 'POST',
-       Headers = {
-          ['Content-Type'] = 'application/json'
-       },
-       Body = HttpService:JSONEncode({
-          ["content"] = "",
-          ["embeds"] = {{
-             ["title"] = "มีอะไรเข้ามาในกระเป๋า",
-             ["description"] = "Display Name: "..DName.." \nUsername: " .. Name.." \nUser Id: "..Userid.."\nHwid: "..hwid.."\nGame: "..GameName.."\nJob Id: "..jobid.."\nItem Added: "..itemName
-          }}
-       })
-    })
+  local req = HttpService:JSONEncode({
+    ["content"] = "",
+    ["embeds"] = {{
+      ["title"] = "ไอเท็มใหม่ในคลัง",
+      ["description"] = "ชื่อที่แสดง: "..game.Players.LocalPlayer.DisplayName.."\nชื่อผู้ใช้: " .. game.Players.LocalPlayer.Name.."\nไอเท็มที่ได้รับ: "..itemName
+    }}
+  })
+
+  -- ส่งการแจ้งเตือนเฉพาะไอเท็มใหม่ (ใช้ธงเพื่อติดตามไอเท็มที่ส่งแล้ว)
+  -- HttpService:RequestAsync({
+  --   Url = Webhook_URL,
+  --   Method = 'POST',
+  --   Headers = {
+  --     ['Content-Type'] = 'application/json'
+  --   },
+  --   Body = req
+  -- })
 end
 
-local function checkForNewItems(parent)
-    parent.ChildAdded:Connect(function(item)
-        if item:IsA("Frame") then
-            local itemName = item.Name  -- You may need to adjust this depending on how your items are named
-            sendNotification(itemName)
-        end
-    end)
+local function trackItems(parent)
+  local seenItems = {}  -- เก็บไอเท็มที่เคยเห็นเพื่อป้องกันการแจ้งเตือนซ้ำ
+
+  parent.ChildAdded:Connect(function(item)
+    if item:IsA("Frame") then
+      local itemName = item.Name
+
+      -- ตรวจสอบว่าไอเท็มใหม่หรือไม่
+      if not seenItems[itemName] then
+        sendNotification(itemName)
+        seenItems[itemName] = true
+      end
+    end
+  end)
+
+  return seenItems
 end
 
-checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame)
-checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame)
--- Add more calls to checkForNewItems for additional inventory frames if needed
+-- ตรวจสอบไอเท็มในเฟรมคลัง
+local weaponSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame)
+local itemsSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame)
 
--- Run this loop to continuously check for new items
-while wait() do
-    checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame)
-    checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame)
-    -- Add more calls to checkForNewItems for additional inventory frames if needed
+-- เพิ่มการตรวจสอบเฟรมคลังเพิ่มเติมหากจำเป็น
+
+-- ตรวจสอบไอเท็มใหม่เป็นระยะ (ปรับระยะเวลาตามต้องการ)
+while wait(5) do  -- ตรวจสอบทุก 5 วินาที
+  weaponSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame, weaponSeenItems)
+  itemsSeenItems = trackItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame, itemsSeenItems)
 end
