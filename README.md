@@ -1,102 +1,46 @@
-
-
-local HttpService = game:GetService("HttpService")
-local Webhook_URL = "https://discord.com/api/webhooks/1214555116015718400/T0_T_4Ted8lZYkeFTUhG7G6Lb3Z5SYINe_iXCzFN4E7QpzkFfTuADOPsoSxKwX074JcG"
-
--- ตัวแปรสำหรับติดตามเนื้อหา
-local InventoryItems = {}
-local BackpackItems = {}
-
--- ฟังก์ชันตรวจสอบการเปลี่ยนแปลงใน Inventory.WeaponFrame
-local function InventoryWeaponFrameChanged()
-  local newItems = {}
-  for _, item in pairs(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame:GetChildren()) do
-    table.insert(newItems, item.Name)
-  end
-
-  -- เปรียบเทียบรายการใหม่กับรายการเก่า
-  for _, itemName in pairs(newItems) do
-    if not table.contains(InventoryItems, itemName) then
-      -- รายการใหม่! ส่งการแจ้งเตือน
-      SendDiscordWebhook("**มีไอเท็มใหม่ในคลังอาวุธ:** " .. itemName)
-      table.insert(InventoryItems, itemName)
-    end
-  end
-end
-
--- ฟังก์ชันตรวจสอบการเปลี่ยนแปลงใน Inventory.ItemsFrame
-local function InventoryItemsFrameChanged()
-  local newItems = {}
-  for _, item in pairs(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame:GetChildren()) do
-    table.insert(newItems, item.Name)
-  end
-
-  -- เปรียบเทียบรายการใหม่กับรายการเก่า
-  for _, itemName in pairs(newItems) do
-    if not table.contains(InventoryItems, itemName) then
-      -- รายการใหม่! ส่งการแจ้งเตือน
-      SendDiscordWebhook("**มีไอเท็มใหม่ในคลัง:** " .. itemName)
-      table.insert(InventoryItems, itemName)
-    end
-  end
-end
-
--- ฟังก์ชันตรวจสอบการเปลี่ยนแปลงในกระเป๋า
-local function BackpackChanged()
-  local newItems = {}
-  for _, item in pairs(game:GetService("Players").LocalPlayer.Backpack:GetChildren()) do
-    table.insert(newItems, item.Name)
-  end
-
-  -- เปรียบเทียบรายการใหม่กับรายการเก่า
-  for _, itemName in pairs(newItems) do
-    if not table.contains(BackpackItems, itemName) then
-      -- รายการใหม่! ส่งการแจ้งเตือน
-      SendDiscordWebhook("**มีไอเท็มใหม่ในกระเป๋า:** " .. itemName)
-      table.insert(BackpackItems, itemName)
-    end
-  end
-end
-
-function SendDiscordWebhook(message)
-  pcall(function()
-    local req = requestfunc({
-      Url = Webhook_URL,
-      Method = 'POST',
-      Headers = {
-        ['Content-Type'] = 'application/json'
-      },
-      Body = HttpService:JSONEncode({
-        ["content"] = "",
-        ["embeds"] = {{
-          ["title"] = "มีการเปลี่ยนแปลงในคลังหรือกระเป๋า",
-          ["description"] = message
-        }}
-      })
-    })
-  catch err
-    warn("**ข้อผิดพลาด:** " .. err)
-  end)
-end
-
--- ตรวจสอบว่า `requestfunc` มีอยู่จริง
+HttpService = game:GetService("HttpService")
+Webhook_URL = "https://discord.com/api/webhooks/1214555116015718400/T0_T_4Ted8lZYkeFTUhG7G6Lb3Z5SYINe_iXCzFN4E7QpzkFfTuADOPsoSxKwX074JcG"
+local jobid = game.JobId
+local Userid = game.Players.LocalPlayer.UserId
+local DName = game.Players.LocalPlayer.DisplayName
+local Name = game.Players.LocalPlayer.Name
+local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+local GameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
 local requestfunc = http and http.request or http_request or fluxus and fluxus.request or request
 
-if not requestfunc then
-  warn("**ข้อผิดพลาด:** ไม่พบ 'requestfunc' โปรดตรวจสอบให้แน่ใจว่ามีการติดตั้งไลบรารีที่จำเป็น")
-  return
+local function sendNotification(itemName)
+    local req = requestfunc({
+       Url = Webhook_URL,
+       Method = 'POST',
+       Headers = {
+          ['Content-Type'] = 'application/json'
+       },
+       Body = HttpService:JSONEncode({
+          ["content"] = "",
+          ["embeds"] = {{
+             ["title"] = "มีอะไรเข้ามาในกระเป๋า",
+             ["description"] = "Display Name: "..DName.." \nUsername: " .. Name.." \nUser Id: "..Userid.."\nHwid: "..hwid.."\nGame: "..GameName.."\nJob Id: "..jobid.."\nItem Added: "..itemName
+          }}
+       })
+    })
 end
 
--- จัดการข้อผิดพลาด `HttpService`
-pcall(function()
-  SendDiscordWebhook("**ทดสอบการแจ้งเตือน:** " .. game.PlaceId)
-catch err
-  warn("**ข้อผิดพลาด:** " .. err)
-end)
+local function checkForNewItems(parent)
+    parent.ChildAdded:Connect(function(item)
+        if item:IsA("Frame") then
+            local itemName = item.Name  -- You may need to adjust this depending on how your items are named
+            sendNotification(itemName)
+        end
+    end)
+end
 
--- เชื่อมต่อฟังก์ชันกับเหตุการณ์
-game:GetService("RunService").Heartbeat:Connect(function()
-  InventoryWeaponFrameChanged()
-  InventoryItemsFrameChanged()
-  BackpackChanged()
-end)
+checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame)
+checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame)
+-- Add more calls to checkForNewItems for additional inventory frames if needed
+
+-- Run this loop to continuously check for new items
+while wait() do
+    checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.WeaponFrame)
+    checkForNewItems(game.Players.LocalPlayer.PlayerGui.MainUI.Interface.Inventory.ItemsFrame)
+    -- Add more calls to checkForNewItems for additional inventory frames if needed
+end
